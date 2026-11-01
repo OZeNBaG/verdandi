@@ -101,6 +101,14 @@ jobs:
         with:
           name: smoke
           path: smoke/
+      - name: results to the android-smoke branch
+        if: always() && github.ref == 'refs/heads/android'
+        run: |
+          cd smoke
+          git init -q -b android-smoke
+          git add -A
+          git -c user.name=ci -c user.email=ci@localhost commit -q -m "smoke test of ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" android-smoke
 
   publish:
     needs: apk
