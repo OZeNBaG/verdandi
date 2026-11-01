@@ -71,12 +71,50 @@ jobs:
           name: Verdandi-apk
           path: Verdandi.apk
 
+
+  smoke:
+    # the apk on an emulator (x86_64 with arm64 translation): screenshots and logs
+    needs: apk
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: android/tests
+      - uses: actions/download-artifact@v4
+        with:
+          name: Verdandi-apk
+      - name: kvm
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: sh android/tests/smoke.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke
+          path: smoke/
+
+  publish:
+    needs: apk
+    runs-on: ubuntu-24.04
+    if: github.ref == 'refs/heads/android'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Verdandi-apk
       - name: publish pre-release
-        if: github.ref == 'refs/heads/android'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release delete android-dev --yes --cleanup-tag || true
-          gh release create android-dev Verdandi.apk --prerelease --target "$GITHUB_SHA" \
+          gh release delete android-dev --yes --cleanup-tag -R "$GITHUB_REPOSITORY" || true
+          gh release create android-dev Verdandi.apk -R "$GITHUB_REPOSITORY" --prerelease --target "$GITHUB_SHA" \
             --title "Verdandi for android (development build ${{ github.run_number }})" \
             --notes "Verdandi for android, built from ${GITHUB_SHA::7}. Install Verdandi.apk on an arm64 phone or tablet (Android 10 or newer). See readme-android.md."
