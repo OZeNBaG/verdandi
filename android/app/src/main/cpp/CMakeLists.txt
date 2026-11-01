@@ -42,6 +42,14 @@ target_compile_definitions(monome PRIVATE EMBED_PROTOS _GNU_SOURCE)
 target_include_directories(monome PRIVATE "${LM}/private" "${LM}")
 target_include_directories(monome PUBLIC "${DEPS}/libmonome/public")
 
+#--- ableton link (sync with other apps on the network)
+set(LINK "${NORNS}/third-party/link")
+add_library(linkc STATIC "${LINK}/extensions/abl_link/src/abl_link.cpp")
+target_include_directories(linkc PUBLIC "${LINK}/extensions/abl_link/include")
+target_include_directories(linkc PRIVATE "${LINK}/include" "${LINK}/modules/asio-standalone/asio/include")
+target_compile_definitions(linkc PRIVATE LINK_PLATFORM_LINUX=1 ASIO_STANDALONE=1)
+target_compile_options(linkc PRIVATE -Wno-multichar)
+
 #--- vcpkg libraries, through pkg-config (static: the full dependency chains)
 find_package(PkgConfig REQUIRED)
 # only vcpkg's .pc files: never the build machine's own cairo &c
@@ -87,6 +95,7 @@ set(MATRON_SOURCES
     ${M}/clocks/clock_crow.cc
     ${M}/clocks/clock_scheduler.cc
     ${M}/time_since.cc
+    ${M}/clocks/clock_link.cc
     # the pi's battery gauge, i2c and oled: no-ops (shared with the macOS port)
     ${M}/platform/macos/hardware_null.cc
     # the device drawn in the window (pure cairo, shared with the macOS port)
@@ -140,6 +149,7 @@ target_compile_definitions(main PRIVATE
     _GNU_SOURCE
     NORNS_DESKTOP=1
     HAVE_LUA_CJSON=1
+    HAVE_ABLETON_LINK=1
     VERSION_MAJOR=0
     VERSION_MINOR=0
     VERSION_PATCH=0
@@ -166,6 +176,7 @@ target_link_libraries(main PRIVATE
     SDL2::SDL2
     luacjson
     lua53
+    linkc
     monome
     nng::nng
     ${VDEPS_STATIC_LIBRARIES}

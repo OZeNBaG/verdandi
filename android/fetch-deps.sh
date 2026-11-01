@@ -17,6 +17,7 @@ fetch libmonome https://github.com/monome/libmonome.git main
 cd ..
 git submodule update --init --depth 1 third-party/lua-cjson crone/softcut \
     third-party/concurrentqueue third-party/readerwriterqueue
+git submodule update --init --recursive --depth 1 third-party/link
 # scripts the app comes with (added to dust/code when missing): awake, mlr
 cd android
 mkdir -p deps/dust/code
