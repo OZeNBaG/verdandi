@@ -95,8 +95,25 @@ set(MATRON_SOURCES
     ${M}/platform/android/android_main.cc
     ${M}/platform/android/device_android.cc
     ${M}/platform/android/fake_sclang.cc
-    ${M}/platform/android/jack_android.cc
+    ${M}/jack_client.cpp
+    ${M}/platform/android/jacklite/jacklite.cc
     ${M}/platform/android/sdl_bridge_android.cc
+    # crone: the mixer, softcut, tape (as on norns, in-process; jack is jacklite)
+    ${NORNS}/crone/src/crone_param_dispatch.cpp
+    ${NORNS}/crone/src/crone.cpp
+    ${NORNS}/crone/src/main.cpp
+    ${NORNS}/crone/src/BufDiskWorker.cpp
+    ${NORNS}/crone/src/Commands.cpp
+    ${NORNS}/crone/src/MixerClient.cpp
+    ${NORNS}/crone/src/OscInterface.cpp
+    ${NORNS}/crone/src/SoftcutClient.cpp
+    ${NORNS}/crone/src/Taper.cpp
+    ${NORNS}/crone/src/Window.cpp
+    ${NORNS}/crone/softcut/softcut-lib/src/FadeCurves.cpp
+    ${NORNS}/crone/softcut/softcut-lib/src/ReadWriteHead.cpp
+    ${NORNS}/crone/softcut/softcut-lib/src/SubHead.cpp
+    ${NORNS}/crone/softcut/softcut-lib/src/Svf.cpp
+    ${NORNS}/crone/softcut/softcut-lib/src/Voice.cpp
     ${NORNS}/norns/sidecar.cpp
     ${NORNS}/norns/sidecar_lines.cpp
     ${NORNS}/norns/sidecar_msg.cpp
@@ -107,10 +124,16 @@ add_library(main SHARED ${MATRON_SOURCES})
 
 target_include_directories(main PRIVATE
     ${M}/platform/android/include
+    ${M}/platform/android/jacklite/include
     ${M}
     ${M}/device
     ${M}/hardware
     ${NORNS}/norns
+    ${NORNS}/third-party/concurrentqueue
+    ${NORNS}/third-party/readerwriterqueue
+    ${NORNS}/crone
+    ${NORNS}/crone/src
+    ${NORNS}/crone/softcut/softcut-lib/include
     ${VDEPS_STATIC_INCLUDE_DIRS})
 
 target_compile_definitions(main PRIVATE

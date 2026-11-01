@@ -24,10 +24,14 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <exception>
 #include <vector>
 
 #include <SDL.h>
 
+#include <jack/jack.h>
+
+#include "crone_main.h"
 #include "matron_main.h"
 #include "platform/android/fake_sclang.h"
 #include "platform/android/sdl_bridge_android.h"
@@ -306,6 +310,7 @@ void *matron_thread(void *p) {
     char arg0[] = "norns";
     char *argv[] = {arg0, NULL};
     matron_main(1, argv);
+    crone_stop();
     matron_cleanup();
     sidecar_client_cleanup();
     // matron_cleanup exits; in case it returns, end the app
@@ -335,6 +340,18 @@ extern "C" int SDL_main(int argc, char *argv[]) {
     }
 
     fake_sclang_start();
+
+    // the audio graph (jacklite) and crone, before matron, as norns/main.cpp. no audio
+    // device yet: the null driver runs the graph in real time and drops the output
+    jacklite_init(48000, 2048);
+    jacklite_start_null_driver(256);
+    try {
+        crone_main();
+    } catch (const std::exception &e) {
+        fprintf(stderr, "verdandi: crone failed: %s\n", e.what());
+    } catch (...) {
+        fprintf(stderr, "verdandi: crone failed\n");
+    }
 
     pthread_t t;
     pthread_attr_t attr;

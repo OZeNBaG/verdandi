@@ -13,9 +13,10 @@ fetch() { # dir url tag
 fetch SDL https://github.com/libsdl-org/SDL.git release-2.30.9
 fetch lua https://github.com/lua/lua.git v5.3.6
 fetch libmonome https://github.com/monome/libmonome.git main
-# norns' own submodule: lua-cjson
+# norns' own submodules
 cd ..
-git submodule update --init --depth 1 third-party/lua-cjson
+git submodule update --init --depth 1 third-party/lua-cjson crone/softcut \
+    third-party/concurrentqueue third-party/readerwriterqueue
 # scripts the app comes with (added to dust/code when missing): awake, mlr
 cd android
 mkdir -p deps/dust/code

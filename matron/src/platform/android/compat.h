@@ -53,6 +53,17 @@ static inline int pthread_setcanceltype(int t, int *old) {
 }
 #endif
 
+// glibc's exp10 (faust's effects in crone use it)
+#include <math.h>
+static inline float norns_exp10f(float x) {
+    return powf(10.f, x);
+}
+static inline double norns_exp10(double x) {
+    return pow(10.0, x);
+}
+#define exp10f norns_exp10f
+#define exp10 norns_exp10
+
 // the shell: android has no /bin/sh
 #define NORNS_SHELL "/system/bin/sh"
 
