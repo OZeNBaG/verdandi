@@ -22,7 +22,20 @@
 //---------------------------------
 //--- common
 
+#ifdef __ANDROID__
+// android has no /tmp: the socket lives in the app's cache dir ($TMPDIR, android_main.cc)
+static char url_buf[512];
+static const char *sidecar_url(void) {
+    if (url_buf[0] == '\0') {
+        const char *tmp = getenv("TMPDIR");
+        snprintf(url_buf, sizeof(url_buf), "ipc://%s/norns-sidecar.ipc", tmp ? tmp : "/data/local/tmp");
+    }
+    return url_buf;
+}
+#define url sidecar_url()
+#else
 static const char *url = "ipc:///tmp/norns-sidecar.ipc";
+#endif
 
 static const char *quit_cmd = "__quit__";
 
@@ -308,7 +321,12 @@ static void sidecar_server_detach_cmd(nng_socket sock, const char *unit, const c
         snprintf(group_prop, sizeof(group_prop), "Group=%u", (unsigned)getgid());
     }
 
-#ifdef __APPLE__
+#if defined(__ANDROID__)
+    (void)unit_arg;
+    (void)user_prop;
+    (void)group_prop;
+    const char *argv[] = {NORNS_SHELL, "-c", cmd, NULL};
+#elif defined(__APPLE__)
     // no systemd: the macOS actions (system_cmd.cc) only signal norns.sh, a plain shell will do
     (void)unit_arg;
     (void)user_prop;

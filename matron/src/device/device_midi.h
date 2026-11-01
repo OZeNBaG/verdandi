@@ -1,6 +1,6 @@
 #pragma once
 
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(__ANDROID__)
 #include <alsa/asoundlib.h>
 #endif
 #include <stdbool.h>
@@ -23,6 +23,11 @@ struct dev_midi {
     uint32_t vsrc;    // virtual device: our own source, others receive what we send
     uint32_t vdst;    // virtual device: our own destination, others send to us
     int pipe_rd;      // CoreMIDI callback -> pipe -> dev_midi_start reader thread
+    int pipe_wr;
+#elif defined(__ANDROID__)
+    // android.media.midi ports, opened by the java side (see device_midi_android.inc)
+    int port_id;  // java's handle for this device/port (-1 = virtual)
+    int pipe_rd;  // java -> pipe -> dev_midi_start reader thread
     int pipe_wr;
 #else
     snd_rawmidi_t *handle_in;

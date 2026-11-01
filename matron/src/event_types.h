@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-#ifdef __APPLE__
-// homebrew ships liblo >= 0.32, which declares lo_message as a typed pointer
+#if defined(__APPLE__) || defined(__ANDROID__)
+// homebrew (and vcpkg, android) ship liblo >= 0.32, which declares lo_message as a typed pointer
 #include <lo/lo_types.h>
 #else
 // lo_message is opaque here. files using it include oracle.h for the full definition.

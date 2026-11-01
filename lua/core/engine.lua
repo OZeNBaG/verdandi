@@ -121,9 +121,16 @@ end
 function Engine.__index(self, idx)
   if Engine.commands[idx] then
     return Engine.commands[idx].func
-  else
-    return rawget(Engine, idx)
   end
+  local v = rawget(Engine, idx)
+  -- no SuperCollider (Verdandi for android, NORNS_ENGINE_STUB=1): the engine's commands were
+  -- read from its .sc file and may be incomplete; a command that was missed does nothing
+  -- instead of stopping the script
+  if v == nil and idx ~= "name" and type(idx) == "string" and Engine.name ~= nil
+    and os.getenv("NORNS_ENGINE_STUB") == "1" then
+    return function() end
+  end
+  return v
 end
 
 setmetatable(Engine, Engine)

@@ -4,7 +4,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef __ANDROID__
+#include <SDL.h>
+#else
 #include <SDL2/SDL.h>
+#endif
 #include <cairo.h>
 
 #include "hardware/io.h"
@@ -13,6 +17,8 @@
 #ifdef __APPLE__
 #include "platform/macos/product.h"
 #include "platform/macos/sdl_bridge.h"
+#elif defined(__ANDROID__)
+#include "platform/android/sdl_bridge_android.h"
 #endif
 
 typedef struct _screen_sdl_priv {
@@ -85,7 +91,7 @@ static void screen_sdl_paint(matron_fb_t *fb) {
     pthread_mutex_lock(&paint_lock);
     if (!closed) {
         cairo_paint(fb->cairo);
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__ANDROID__)
         sdl_bridge_present(priv->window, priv->draw_surface);
 #else
         SDL_BlitScaled(priv->draw_surface, NULL, priv->window_surface, &windowSize);
@@ -111,7 +117,7 @@ static void screen_sdl_surface_destroy(void *data) {
         return;
     }
     // window first: a frame still queued for it reads draw_surface
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__ANDROID__)
     sdl_bridge_destroy_window(priv->window);
 #else
     SDL_DestroyWindow(priv->window);
@@ -126,6 +132,10 @@ static cairo_surface_t *screen_sdl_surface_create(screen_sdl_priv_t *priv) {
 #ifdef __APPLE__
     // SDL is initialized on the main thread by sdl_bridge_init()
     priv->window = sdl_bridge_create_window(MACOS_PRODUCT, windowSize.w, windowSize.h);
+    priv->window_surface = NULL;
+#elif defined(__ANDROID__)
+    // SDL belongs to the activity's SDL thread (sdl_bridge_android.cc)
+    priv->window = sdl_bridge_create_window("Verdandi", windowSize.w, windowSize.h);
     priv->window_surface = NULL;
 #else
     SDL_Init(SDL_INIT_VIDEO);

@@ -1,0 +1,12 @@
+{
+  "name": "verdandi",
+  "version-string": "0.1.0",
+  "builtin-baseline": "84bab45d415d22042bd0b9081aea57f362da3f35",
+  "dependencies": [
+    { "name": "cairo", "default-features": false, "features": ["freetype"] },
+    "freetype",
+    "liblo",
+    { "name": "libsndfile", "default-features": false },
+    "nng"
+  ]
+}

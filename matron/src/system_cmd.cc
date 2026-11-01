@@ -142,7 +142,15 @@ typedef struct {
     const char *unit;
 } system_action_t;
 
-#ifdef __APPLE__
+#if defined(__ANDROID__)
+// android: norns runs inside the app's process. SLEEP and RESET end the app (NORNS_APP_PID,
+// set by android_main.cc); open it again from the launcher.
+static const system_action_t system_actions[] = {
+    {"shutdown", "sleep 0.5; kill -TERM $NORNS_APP_PID", "norns-shutdown"},
+    {"reset", "sleep 0.5; kill -TERM $NORNS_APP_PID", "norns-reset"},
+    {"update", "echo 'Verdandi: update scripts in maiden, Verdandi itself with a new version of the app'", "norns-update"},
+};
+#elif defined(__APPLE__)
 // macOS (macos/norns.sh supervises norns): SLEEP quits norns, it does not power off the Mac;
 // RESTART leaves a marker so norns.sh starts norns and sclang again. (pkill -a: macOS pkill
 // spares its own ancestors by default, and norns is one of them; in the app the binary is

@@ -1,4 +1,4 @@
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(__ANDROID__)
 #include <alsa/asoundlib.h>
 #endif
 #include <pthread.h>
@@ -13,7 +13,7 @@
 
 #define DEV_MIDI_INPUT_BUFFER_SIZE 128
 
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(__ANDROID__)
 unsigned int dev_midi_port_count(const char *path) {
     int card;
     int alsa_dev;
@@ -146,7 +146,7 @@ void dev_midi_deinit(void *self) {
     }
 }
 
-#endif // !__APPLE__
+#endif // !__APPLE__ && !__ANDROID__
 
 static inline bool is_status_byte(uint8_t byte) {
     return (byte & 0xf0) >> 7;
@@ -307,6 +307,8 @@ static inline ssize_t dev_midi_consume_buffer(midi_input_state_t *state, ssize_t
 
 #ifdef __APPLE__
 #include "platform/macos/device_midi_coremidi.inc"
+#elif defined(__ANDROID__)
+#include "platform/android/device_midi_android.inc"
 #else
 void *dev_midi_start(void *self) {
     struct dev_midi *midi = (struct dev_midi *)self;

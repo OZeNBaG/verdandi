@@ -50,7 +50,11 @@ static pid_t shell_spawn(const char *cmd, int *out_fd) {
         dup2(fds[1], STDERR_FILENO);
         close(fds[0]);
         close(fds[1]);
+        #ifdef __ANDROID__
+        execl(NORNS_SHELL, "sh", "-c", cmd, (char *)NULL);
+#else
         execl("/bin/sh", "sh", "-c", cmd, (char *)NULL);
+#endif
         _exit(127);
     }
 

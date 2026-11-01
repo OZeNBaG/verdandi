@@ -1,0 +1,82 @@
+name: android
+
+# builds Verdandi for android (android/, readme-android.md): an apk for arm64 phones and
+# tablets. every push to the android branch publishes it as the "android-dev" pre-release
+# (pre-release: the macOS app's update check skips it).
+
+on:
+  push:
+    branches: [android]
+    paths-ignore: ['docs/**', '*.md']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/android/deps/vcpkg
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-cache
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.11.1
+
+      - name: sources (SDL, lua, libmonome, bundled scripts)
+        run: android/fetch-deps.sh
+
+      - name: vcpkg
+        run: |
+          git clone -q --depth 1 --branch 2025.12.12 https://github.com/microsoft/vcpkg "$VCPKG_ROOT"
+          "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+          mkdir -p "$VCPKG_DEFAULT_BINARY_CACHE"
+
+      - name: vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: .vcpkg-cache
+          key: vcpkg-arm64-android-${{ hashFiles('android/app/src/main/cpp/vcpkg.json') }}-${{ github.run_id }}
+          restore-keys: |
+            vcpkg-arm64-android-${{ hashFiles('android/app/src/main/cpp/vcpkg.json') }}-
+            vcpkg-arm64-android-
+
+      - name: build
+        run: |
+          export ANDROID_NDK_HOME="$ANDROID_NDK_LATEST_HOME"
+          NDK_VERSION=$(basename "$ANDROID_NDK_HOME")
+          echo "ndk $NDK_VERSION"
+          gradle -p android --no-daemon --stacktrace assembleDebug \
+            -PndkVersion="$NDK_VERSION" \
+            -PverdandiVersionCode=${{ github.run_number }} \
+            -PverdandiVersion=0.1.0-android.${{ github.run_number }}
+          cp android/app/build/outputs/apk/debug/app-debug.apk Verdandi.apk
+
+      - name: vcpkg logs
+        if: failure()
+        run: |
+          find android/deps/vcpkg/buildtrees -name '*.log' -newer android/fetch-deps.sh 2>/dev/null \
+            | grep -E 'err|out' | head -20 | while read f; do echo "=== $f"; tail -60 "$f"; done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Verdandi-apk
+          path: Verdandi.apk
+
+      - name: publish pre-release
+        if: github.ref == 'refs/heads/android'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete android-dev --yes --cleanup-tag || true
+          gh release create android-dev Verdandi.apk --prerelease --target "$GITHUB_SHA" \
+            --title "Verdandi for android (development build ${{ github.run_number }})" \
+            --notes "Verdandi for android, built from ${GITHUB_SHA::7}. Install Verdandi.apk on an arm64 phone or tablet (Android 10 or newer). See readme-android.md."

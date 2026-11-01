@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #include "device_common.h"
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(__ANDROID__)
 #include <libevdev/libevdev.h>
 #endif
 
@@ -25,6 +25,9 @@ struct dev_hid {
     void *dev;
     // primary usage of the device (keyboard, mouse, joystick, gamepad); selects button codes
     uint32_t app_usage;
+#elif defined(__ANDROID__)
+    // the java side's InputDevice id; events arrive through android_hid_event()
+    void *dev;
 #else
     struct libevdev *dev;
 #endif

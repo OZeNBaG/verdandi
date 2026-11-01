@@ -1,0 +1,132 @@
+plugins {
+    id 'com.android.application'
+}
+
+def norns = rootProject.projectDir.parentFile
+def deps = new File(rootProject.projectDir, 'deps')
+def ndkHome = System.getenv('ANDROID_NDK_HOME') ?: System.getenv('ANDROID_NDK_LATEST_HOME') ?: ''
+def vcpkgRoot = System.getenv('VCPKG_ROOT') ?: new File(deps, 'vcpkg').path
+def buildId = System.getenv('GITHUB_SHA') ?: new Date().format('yyyyMMddHHmmss')
+def appVersion = project.findProperty('verdandiVersion') ?: '0.1.0'
+def appVersionCode = (project.findProperty('verdandiVersionCode') ?: '1') as int
+
+android {
+    namespace 'org.verdandi.app'
+    compileSdk 35
+    if (project.hasProperty('ndkVersion')) {
+        ndkVersion project.property('ndkVersion')
+    }
+
+    defaultConfig {
+        applicationId 'org.verdandi.app'
+        minSdk 29
+        targetSdk 35
+        versionCode appVersionCode
+        versionName appVersion
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+        externalNativeBuild {
+            cmake {
+                arguments "-DCMAKE_TOOLCHAIN_FILE=${vcpkgRoot}/scripts/buildsystems/vcpkg.cmake",
+                          "-DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=${ndkHome}/build/cmake/android.toolchain.cmake",
+                          "-DVCPKG_TARGET_TRIPLET=arm64-android",
+                          "-DANDROID_STL=c++_shared"
+                targets 'main', 'SDL2'
+            }
+        }
+    }
+
+    signingConfigs {
+        // a fixed key (android/verdandi-debug.keystore, not secret) so every build installs
+        // over the last one without uninstalling (which would delete dust)
+        verdandi {
+            storeFile file('../verdandi-debug.keystore')
+            storePassword 'verdandi'
+            keyAlias 'verdandi'
+            keyPassword 'verdandi'
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.verdandi
+            jniDebuggable true
+        }
+        release {
+            signingConfig signingConfigs.verdandi
+            minifyEnabled false
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path 'src/main/cpp/CMakeLists.txt'
+            version '3.22.1'
+        }
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs += new File(deps, 'SDL/android-project/app/src/main/java')
+            assets.srcDirs += layout.buildDirectory.dir('generated/verdandi-assets')
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging true
+        }
+    }
+}
+
+// the norns home in the apk (assets/home, unpacked by platform/android/android_main.cc):
+// norns/lua, sc, resources (R: replaced by each new build) and the bundled scripts (S: only
+// added when missing). manifest.txt lists them, its first line the build id.
+def assetsTask = tasks.register('verdandiAssets') {
+    def out = layout.buildDirectory.dir('generated/verdandi-assets/home').get().asFile
+    inputs.dir(new File(norns, 'lua'))
+    inputs.dir(new File(norns, 'sc'))
+    inputs.dir(new File(norns, 'resources'))
+    inputs.property('buildId', buildId)
+    outputs.dir(out)
+    doLast {
+        project.delete(out)
+        out.mkdirs()
+        def lines = [buildId]
+        def add = { File src, String rel, String kind ->
+            def dest = new File(out, rel)
+            dest.parentFile.mkdirs()
+            dest.bytes = src.bytes
+            lines << "${kind} ${rel}"
+        }
+        ['lua', 'sc', 'resources'].each { d ->
+            def base = new File(norns, d)
+            base.eachFileRecurse(groovy.io.FileType.FILES) { f ->
+                def rel = base.toPath().relativize(f.toPath()).toString().replace('\\', '/')
+                if (!rel.split('/').any { it.startsWith('.') }) {
+                    add(f, "norns/${d}/${rel}", 'R')
+                }
+            }
+        }
+        add(new File(norns, 'matronrc.lua'), 'norns/matronrc.lua', 'R')
+        add(new File(norns, 'update/version.txt'), 'norns/update/version.txt', 'R')
+        def dust = new File(deps, 'dust')
+        if (dust.isDirectory()) {
+            dust.eachFileRecurse(groovy.io.FileType.FILES) { f ->
+                def rel = dust.toPath().relativize(f.toPath()).toString().replace('\\', '/')
+                if (!rel.split('/').any { it.startsWith('.') }) {
+                    add(f, "dust/${rel}", 'S')
+                }
+            }
+        }
+        new File(out, 'manifest.txt').text = lines.join('\n') + '\n'
+    }
+}
+
+tasks.named('preBuild') { dependsOn assetsTask }
