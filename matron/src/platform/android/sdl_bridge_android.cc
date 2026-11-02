@@ -31,13 +31,19 @@ namespace {
 
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
-SDL_Texture *texture = NULL;
-int tex_w = 0, tex_h = 0;
+SDL_Texture *texture = NULL;      // the device: static skin + controls, canvas size
+SDL_Texture *oled_tex = NULL;     // matron's frame, 128x64, scaled up by the gpu
+int tex_w = 0, tex_h = 0;         // window, device pixels
+int can_w = 0, can_h = 0;         // canvas (at most CANVAS_MAX_W wide; the gpu scales it up)
+#define CANVAS_MAX_W 1200
+bool controls_dirty = true;       // keys/knobs/buttons changed: re-render the canvas
+bool frame_dirty = false;         // a new oled frame arrived
 
 // matron's frame, converted on its thread (present), drawn on the SDL thread
 pthread_mutex_t frame_lock = PTHREAD_MUTEX_INITIALIZER;
 cairo_surface_t *oled = NULL; // 128x64 RGB24
 bool have_frame = false;
+bool pending_wake = false; // a wake event is queued: one is enough
 bool closed = false;
 
 Uint32 wake_event = 0; // SDL user event: a new frame or a control changed
@@ -45,7 +51,8 @@ Uint32 wake_event = 0; // SDL user event: a new frame or a control changed
 // drawing state: SDL thread only
 cairo_surface_t *canvas = NULL;    // ARGB32, window size
 cairo_surface_t *static_bg = NULL; // skin_draw_static, window size
-skin_geom_t geom;
+skin_geom_t geom;  // window pixels: touches, the oled's place
+skin_geom_t cgeom; // canvas pixels: drawing
 skin_state_t skin;
 bool foreground = true;
 
@@ -143,6 +150,11 @@ void free_surfaces(void) {
         SDL_DestroyTexture(texture);
         texture = NULL;
     }
+    if (oled_tex != NULL) {
+        SDL_DestroyTexture(oled_tex);
+        oled_tex = NULL;
+    }
+    tex_w = tex_h = 0;
 }
 
 bool layout(void) {
@@ -151,43 +163,68 @@ bool layout(void) {
     if (w <= 0 || h <= 0) {
         return false;
     }
-    if (canvas != NULL && texture != NULL && w == tex_w && h == tex_h) {
+    if (canvas != NULL && texture != NULL && oled_tex != NULL && w == tex_w && h == tex_h) {
         return true;
     }
     free_surfaces();
     tex_w = w;
     tex_h = h;
     skin_geom(w, h, &geom);
-    canvas = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
-    static_bg = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
+    double k = w > CANVAS_MAX_W ? (double)CANVAS_MAX_W / w : 1.0;
+    can_w = (int)(w * k);
+    can_h = (int)(h * k);
+    skin_geom(can_w, can_h, &cgeom);
+    canvas = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, can_w, can_h);
+    static_bg = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, can_w, can_h);
     cairo_t *cr = cairo_create(static_bg);
-    skin_draw_static(cr, &geom);
+    skin_draw_static(cr, &cgeom);
+    // the bezel's black interior (the oled itself is drawn by the gpu on top)
+    cairo_surface_t *blank = cairo_image_surface_create(CAIRO_FORMAT_RGB24, 128, 64);
+    skin_draw_oled(cr, &cgeom, blank);
+    cairo_surface_destroy(blank);
     cairo_destroy(cr);
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
     // cairo ARGB32 is native-endian ARGB: SDL's ARGB8888
-    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, w, h);
-    return texture != NULL;
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, can_w, can_h);
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
+    oled_tex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STREAMING, 128, 64);
+    controls_dirty = true;
+    frame_dirty = true;
+    return texture != NULL && oled_tex != NULL;
 }
 
+// renders only what changed, at most once per loop pass
 void draw(void) {
     if (!foreground || renderer == NULL || !layout()) {
         return;
     }
-    cairo_t *cr = cairo_create(canvas);
-    cairo_set_source_surface(cr, static_bg, 0, 0);
-    cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
-    cairo_paint(cr);
-    cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
-    skin_draw_controls(cr, &geom, &skin);
-    pthread_mutex_lock(&frame_lock);
-    if (have_frame && oled != NULL) {
-        skin_draw_oled(cr, &geom, oled);
+    if (controls_dirty) {
+        cairo_t *cr = cairo_create(canvas);
+        cairo_set_source_surface(cr, static_bg, 0, 0);
+        cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
+        cairo_paint(cr);
+        cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
+        skin_draw_controls(cr, &cgeom, &skin);
+        cairo_destroy(cr);
+        cairo_surface_flush(canvas);
+        SDL_UpdateTexture(texture, NULL, cairo_image_surface_get_data(canvas), cairo_image_surface_get_stride(canvas));
+        controls_dirty = false;
     }
-    pthread_mutex_unlock(&frame_lock);
-    cairo_destroy(cr);
-    cairo_surface_flush(canvas);
-    SDL_UpdateTexture(texture, NULL, cairo_image_surface_get_data(canvas), cairo_image_surface_get_stride(canvas));
+    if (frame_dirty) {
+        pthread_mutex_lock(&frame_lock);
+        if (have_frame && oled != NULL) {
+            cairo_surface_flush(oled);
+            SDL_UpdateTexture(oled_tex, NULL, cairo_image_surface_get_data(oled), cairo_image_surface_get_stride(oled));
+        }
+        frame_dirty = false;
+        pthread_mutex_unlock(&frame_lock);
+    }
     SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, texture, NULL, NULL);
+    if (have_frame) {
+        SDL_Rect r = {geom.oled_x, geom.oled_y, 128 * geom.oled_px, 64 * geom.oled_px};
+        SDL_RenderCopy(renderer, oled_tex, NULL, &r);
+    }
     SDL_RenderPresent(renderer);
 }
 
@@ -243,7 +280,7 @@ void finger_down(const SDL_TouchFingerEvent *e) {
         f->button = c;
         skin.button_down = c;
     }
-    draw();
+    controls_dirty = true;
 }
 
 void finger_motion(const SDL_TouchFingerEvent *e) {
@@ -259,7 +296,7 @@ void finger_motion(const SDL_TouchFingerEvent *e) {
             f->acc -= ticks * drag_step;
             skin.enc_ticks[f->enc - 1] += ticks;
             post_enc(f->enc, ticks);
-            draw();
+            controls_dirty = true;
         }
     }
     f->x = px;
@@ -284,7 +321,7 @@ void finger_up(const SDL_TouchFingerEvent *e) {
         }
     }
     f->used = false;
-    draw();
+    controls_dirty = true;
 }
 
 // the app goes to the background: let go of everything held
@@ -351,6 +388,7 @@ void sdl_bridge_run(void) {
                 break;
             case SDL_APP_DIDENTERFOREGROUND:
                 foreground = true;
+                controls_dirty = frame_dirty = true;
                 redraw = true;
                 break;
             case SDL_RENDER_DEVICE_RESET:
@@ -372,12 +410,15 @@ void sdl_bridge_run(void) {
                 break;
             default:
                 if (e.type == wake_event) {
-                    redraw = true;
+                    pthread_mutex_lock(&frame_lock);
+                    pending_wake = false;
+                    pthread_mutex_unlock(&frame_lock);
+                    frame_dirty = true;
                 }
                 break;
             }
         } while (!quit && SDL_PollEvent(&e));
-        if (redraw) {
+        if (redraw || controls_dirty || frame_dirty) {
             draw();
         }
     }
@@ -403,10 +444,16 @@ void sdl_bridge_present(SDL_Window *win, SDL_Surface *src) {
         SDL_ConvertPixels(src->w, src->h, src->format->format, src->pixels, src->pitch, SDL_PIXELFORMAT_RGB888,
                           cairo_image_surface_get_data(oled), cairo_image_surface_get_stride(oled));
         cairo_surface_mark_dirty(oled);
+        bool was = pending_wake;
+        pending_wake = true;
         have_frame = true;
+        pthread_mutex_unlock(&frame_lock);
+        if (!was) {
+            wake();
+        }
+        return;
     }
     pthread_mutex_unlock(&frame_lock);
-    wake();
 }
 
 void sdl_bridge_destroy_window(SDL_Window *win) {
