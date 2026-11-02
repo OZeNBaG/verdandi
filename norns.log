@@ -1,0 +1,228 @@
+verdandi: build cb74601df5791d00f0fd21b7351bcba4bfcb35f4, home /storage/emulated/0/Android/data/org.verdandi.app/files (unpacking)
+verdandi: 260 files unpacked
+verdandi: starting, home /storage/emulated/0/Android/data/org.verdandi.app/files
+INFO: pixel format wanted SDL_PIXELFORMAT_RGBX8888 (2), got SDL_PIXELFORMAT_RGBX8888 (2)
+s_glBindAttribLocation: bind attrib 0 name a_position
+s_glBindAttribLocation: bind attrib 1 name a_color
+s_glBindAttribLocation: bind attrib 2 name a_texCoord
+fake_sclang: listening on 57120 (no SuperCollider yet)
+constructed Client: crone
+constructed Client: softcut
+initializing buffer management worker..
+setting up jack clients..
+engine sample rate: 48000
+engine sample rate: 48000
+starting jack clients..
+connecting ports... 
+starting OSC interface...
+osc methods: 
+/hello []
+/goodbye []
+/quit []
+/poll/start/vu []
+/poll/stop/vu []
+/poll/start/tape []
+/poll/stop/tape []
+/set/level/adc [f]
+/set/level/dac [f]
+/set/level/ext [f]
+/set/level/cut_master [f]
+/set/level/ext_rev [f]
+/set/level/rev_dac [f]
+/set/level/monitor [f]
+/set/level/monitor_mix [if]
+/set/level/monitor_rev [f]
+/set/level/compressor_mix [f]
+/set/enabled/compressor [f]
+/set/enabled/reverb [f]
+/set/param/compressor/ratio [f]
+/set/param/compressor/threshold [f]
+/set/param/compressor/attack [f]
+/set/param/compressor/release [f]
+/set/param/compressor/gain_pre [f]
+/set/param/compressor/gain_post [f]
+/set/param/reverb/pre_del [f]
+/set/param/reverb/lf_fc [f]
+/set/param/reverb/low_rt60 [f]
+/set/param/reverb/mid_rt60 [f]
+/set/param/reverb/hf_damp [f]
+/set/enabled/cut [if]
+/set/level/cut [if]
+/set/pan/cut [if]
+/set/level/adc_cut [f]
+/set/level/ext_cut [f]
+/set/level/tape_cut [f]
+/set/level/cut_rev [f]
+/set/level/in_cut [iif]
+/set/level/cut_cut [iif]
+/set/param/cut/rate [if]
+/set/param/cut/loop_start [if]
+/set/param/cut/loop_end [if]
+/set/param/cut/loop_flag [if]
+/set/param/cut/fade_time [if]
+/set/param/cut/rec_level [if]
+/set/param/cut/pre_level [if]
+/set/param/cut/rec_flag [if]
+/set/param/cut/play_flag [if]
+/set/param/cut/rec_offset [if]
+/set/param/cut/position [if]
+/set/param/cut/pre_filter_fc [if]
+/set/param/cut/pre_filter_fc_mod [if]
+/set/param/cut/pre_filter_rq [if]
+/set/param/cut/pre_filter_lp [if]
+/set/param/cut/pre_filter_hp [if]
+/set/param/cut/pre_filter_bp [if]
+/set/param/cut/pre_filter_br [if]
+/set/param/cut/pre_filter_dry [if]
+/set/param/cut/post_filter_fc [if]
+/set/param/cut/post_filter_rq [if]
+/set/param/cut/post_filter_lp [if]
+/set/param/cut/post_filter_hp [if]
+/set/param/cut/post_filter_bp [if]
+/set/param/cut/post_filter_br [if]
+/set/param/cut/post_filter_dry [if]
+/set/param/cut/voice_sync [iif]
+/set/param/cut/level_slew_time [if]
+/set/param/cut/pan_slew_time [if]
+/set/param/cut/recpre_slew_time [if]
+/set/param/cut/rate_slew_time [if]
+/set/param/cut/buffer [ii]
+/softcut/buffer/read_mono [sfffiiff]
+/softcut/buffer/read_stereo [sfffff]
+/softcut/buffer/write_mono [sffi]
+/softcut/buffer/write_stereo [sff]
+/softcut/buffer/clear []
+/softcut/buffer/clear_channel [i]
+/softcut/buffer/clear_region [ff]
+/softcut/buffer/clear_region_channel [iff]
+/softcut/buffer/clear_fade_region [ffff]
+/softcut/buffer/clear_fade_region_channel [iffff]
+/softcut/buffer/copy_mono [iifffffi]
+/softcut/buffer/copy_stereo [fffffi]
+/softcut/buffer/render [iffi]
+/softcut/query/position [i]
+/softcut/reset []
+/set/param/cut/phase_quant [if]
+/set/param/cut/phase_offset [if]
+/poll/start/cut/phase []
+/poll/stop/cut/phase []
+/tape/record/open [s]
+/tape/record/start []
+/tape/record/pause [i]
+/tape/record/stop []
+/tape/play/open [s]
+/tape/play/start []
+/tape/play/pause [i]
+/tape/play/stop []
+/tape/play/loop [i]
+/set/level/tape [f]
+/set/level/tape_rev [f]
+MATRON
+norns version: 0.0.0
+git hash: android
+
+platform: unknown (0)
+loading matronrc file: /storage/emulated/0/Android/data/org.verdandi.app/files/matronrc.lua
+setup IO screen:sdl
+IO setup OK.
+font setup OK.
+Unable to check temperature: /sys/class/thermal/thermal_zone0/temp not readable
+Error: cpu read
+init oracle...
+OSC rx port: 8888 
+OSC ext port: 57120
+OSC remote port: 10111
+init weaver...
+starting main lua vm
+running lua config file: dofile('/storage/emulated/0/Android/data/org.verdandi.app/files/norns/lua/core/config.lua')
+virtual /home/we -> /storage/emulated/0/Android/data/org.verdandi.app/files
+init dev_monitor...
+setting cleanup...
+init input...
+running startup...
+failed to read from stdin
+error loading keyboard layout, using old value: us
+jacklite: cannot connect SuperCollider:out_2 -> crone:input_6
+jacklite: cannot connect crone:output_5 -> SuperCollider:in_1
+jacklite: cannot connect SuperCollider:out_1 -> crone:input_5
+jacklite: cannot connect crone:output_6 -> SuperCollider:in_2
+start_audio(): 
+scanning devices...
+handling pending events...
+_norns.midi.add: 1, virtual, userdata: 0x75c834207d50
+running post-startup...
+_norns._post_startup
+calling: menu-mic
+calling: menu-out
+s_glBindAttribLocation: bind attrib 0 name a_position
+s_glBindAttribLocation: bind attrib 1 name a_color
+s_glBindAttribLocation: bind attrib 2 name a_texCoord
+Error: cpu read
+Error: cpu read
+norns.startup_status.ok
+# script clear
+### SCRIPT ERROR: NO SCRIPT
+network connections:
+--------------------
+1	sh: nmcli: inaccessible or not found
+fake_sclang: 5 engines installed
+Error: cpu read
+available engines (0): 
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+Error: cpu read
+# script clear
+# script load: /home/we/dust/code/awake/awake.lua
+### initializing data folder
+including /home/we/dust/code/awake/lib/halfsecond.lua
+# script run
+loading engine: PolyPerc
+>> reading PMAP /home/we/dust/data/awake/awake.pmap
+m.read: /home/we/dust/data/awake/awake.pmap not read, using defaults.
+fake_sclang: engine PolyPerc: 7 commands, 8 polls (from /storage/emulated/0/Android/data/org.verdandi.app/files/norns/sc/engines/Engine_PolyPerc.sc)
+Engine.register_commands; count: 7
+___ engine commands ___
+amp	 	f
+cutoff	 	f
+gain	 	f
+hz	 	f
+pan	 	f
+pw	 	f
+release	 	f
+___ polls ___
+amp_in_l
+amp_in_r
+amp_out_l
+amp_out_r
+cpu_avg
+cpu_peak
+pitch_in_l
+pitch_in_r
+# script init
+starting halfsecond
+pset >> read: /home/we/dust/data/awake/awake-01.pset
+pset :: /home/we/dust/data/awake/awake-01.pset not read.
+Error: cpu read
+Error: cpu read
+Error: cpu read
