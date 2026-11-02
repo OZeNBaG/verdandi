@@ -57,6 +57,19 @@ set(VCPKG_PC "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
 set(ENV{PKG_CONFIG_LIBDIR} "${VCPKG_PC}/lib/pkgconfig:${VCPKG_PC}/share/pkgconfig")
 pkg_check_modules(VDEPS REQUIRED cairo cairo-ft freetype2 liblo sndfile)
 find_package(nng CONFIG REQUIRED)
+# vcpkg also installs some of them as shared libraries (liblo): link the .a files, so
+# libmain.so needs nothing outside the apk
+set(VDEPS_LINK)
+foreach(lib ${VDEPS_STATIC_LIBRARIES})
+    unset(found CACHE)
+    find_library(found NAMES lib${lib}.a lib${lib}_static.a PATHS ${VDEPS_STATIC_LIBRARY_DIRS} NO_DEFAULT_PATH)
+    if(found)
+        list(APPEND VDEPS_LINK ${found})
+    else()
+        list(APPEND VDEPS_LINK ${lib})
+    endif()
+endforeach()
+message(STATUS "vcpkg libraries: ${VDEPS_LINK}")
 
 #--- matron
 set(MATRON_SOURCES
@@ -179,7 +192,7 @@ target_link_libraries(main PRIVATE
     linkc
     monome
     nng::nng
-    ${VDEPS_STATIC_LIBRARIES}
+    ${VDEPS_LINK}
     log
     android
     dl
